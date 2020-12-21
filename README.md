@@ -24,23 +24,31 @@ Web页面响应变慢
 ## 加密算法介绍
 
 ### 对称加密
-加密密钥和解密密钥都是同一个，加解密速度快，密钥安全性和密钥长度正相关，常见的对称加密算法有AES、
+加密密钥和解密密钥都是同一个，加解密速度快，密钥安全性和密钥长度正相关，常见的对称加密算法有AES、DES、3DES、RC4等
 - 序列密码：
 包含三个要素，一段无穷序列、明文、密文
 加密的原理就是从无穷序列中选取一段和明文等长的序列，二者做异或运行，得到的即为密文；解密逻辑同理，只需让密文和上述序列再做一次异或运算即可得到原始明文。
-附图：
+![](https://img-blog.csdnimg.cn/20201216235004602.png?x-oss-process=image/watermark,type_ZmFuZ3poZW5naGVpdGk,shadow_10,text_aHR0cHM6Ly9ibG9nLmNzZG4ubmV0L2x1dHVhbnR1YW4xMDAz,size_16,color_FFFFFF,t_70)
 -
 -
 - 分组密码模式
-以AES-128举例，将明文按128位大小的块分割，针对每一个分块进行加解密，常见的分组模式有ECB、CBC等
-ECB：
-CBC：
+将数据分块，以AES-128举例，将明文按128位（16字节）大小的块分割，针对每一个分块进行加密，数据长度不够一个块大小的就需要进行填充，常见的分组模式有ECB、CBC、CFB、GCM等
+ECB：它是最简单的分组密码模式，相同的密钥对每个块都进行一次加密，因为分组密码是确定的，那么每个块输出的密文肯定是确定的。
+CBC：CBC模式是为了解决ECB天生的确定性推出的，引入了一个初始向量IV，过程是首先生成一个随机IV，长度与加密块等长，然后明文第一块内容与IV进行异或操作后再进行加密，等到的密文会被作为下一块的IV使用，以此类推，这样每次加密操作都是同一个加密链条中的一部分。
+![CBC模式](https://img2018.cnblogs.com/blog/422171/201909/422171-20190905171806386-1456272303.png "CBC模式")
 
 ### 非对称加密
 它有两个密钥，一个是“公钥”，一个是“私钥”，两个密钥不同，所以“不对称”，私钥必须严格保密，公钥可以公开给任何人使用。
-这里有个特别的“单向性”，公钥加密的数据只可以用私钥解密，反之私钥加密的数据只可以用公钥解密，常见算法有RSA
+这里有个特别的“单向性”，公钥加密的数据只可以用私钥解密，反之私钥加密的数据只可以用公钥解密，前者可以用到加解密中，后者可以用到数据签名中。
+非对称加密的常见算法有RSA、DSA、ECDSA等。
 
 ### 散列
+散列函数是将任意长度的输入转化为定长输出的算法，常见的有SHA-1、SHA-256、MD5等
+它有几个特性：
+- 单向性：给定一个散列，计算上无法找到或者构造出生成它的消息
+- 弱抗碰撞性：给定一条消息和它的散列，计算上无法找到一条不同的消息和它具有相同的散列
+- 强抗碰撞性：计算上无法找到两条散列相同的消息
+散列函数最常用的使用场合是以紧凑的方式表示并比较大量数据，为了避免直接比较两个大文档是否相同，可以直接对比两个文档的散列值
 
 
 ## 中间人攻击
@@ -96,7 +104,60 @@ ps：第三方机构的公钥客户端可以直接获得；
 上述整个过程可以总结为：
 HTTPS要使客户端与服务器端的通信过程得到安全保证，必须使用的对称加密算法，但是协商对称加密算法的过程，需要使用非对称加密算法来保证安全，然而直接使用非对称加密的过程本身也不安全，会有中间人篡改公钥的可能性，所以客户端与服务器不直接使用公钥，而是使用数字证书签发机构颁发的证书来保证非对称加密过程本身的安全。这样通过这些机制协商出一个对称加密算法，就此双方使用该算法进行加密解密。从而解决了客户端与服务器端之间的通信安全问题。
 
+
 ## 深入介绍TLS协议
+https://www.processon.com/diagraming/5fda2d67e0b34d06f4fd3416
+
+ClientHello:
+--
+    Handshake protocol: ClientHello
+    	Version: TLS 1.2
+    	Random
+    		Client time: May 22, 2030 02:43:46 CMT
+    		Random bytes: b76b0e61829557eb4c611adfd2d36eb232dc1332fe29802e321e871 
+    	Session ID: (empty)
+    	Cipher Suites
+    		Suite: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    		Suite: TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
+    		Suite: TLS_RSA_WITH_AES_128_GCM_SHA256
+    		Suite: TLS_ECDHE_RSA_WITH_AES_128_BC_SHA
+    		Suite: TLS_DHE_RSA_WITH_AES_128_CBC_SHA
+    		Suite: TLS_RSA_WITH_AES_128_CBC_SHA
+    		Suite: TLS_RSA_WITH_3DES_EDE_CBC_SHA
+    		Suite: TLS_RSA_WITH_RC4_128_SHA
+    	Compression methods
+    		Method: null
+    	Extensions
+    		Extension: server_name
+    			Hostname: www.feistyduck.com
+    		Extension: renegotiation_info
+    		Extension: elliptic curves
+    			Named curve: secp256r1
+    			Named curve: secp384r1
+    		Extension: signature_algorithms
+    			Algorithm: sha1/rsa
+    			Algorithm: sha256/rsa
+    			Algorithm: sha1/ecdsa
+    			Algorithm: sha256/ecdsa
+
+
+
+
+ServerHello:
+--
+    Handshake protocol: ServerHello
+    	Version: TLS 1.2
+    	Random
+    		Server time: Mar 10，2059 02:35:57 GMT
+    		Random bytes: 8469b09b480c1978182ce1b59290487609f41132312ca22aacaf5012
+    	Session ID: 4cae75c91cf5adf55f93c9fb5dd36d19903b1182029af3d527b7a42ef1c32c80
+    	Cipher Suite: TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+    	Compression method: null
+    	Extensions
+    		Extension: server name
+    		Extension: renegotiation info
+
 
 ## 快借KMS加解密介绍（可选）
-流程图 & 代码
+和HTTPS加解密不同的是，缺少了密钥协商这一过程
+https://www.processon.com/view/link/5f8edcacf346fb06e1e095a8
